@@ -11,7 +11,7 @@ import platform
 import subprocess
 
 
-def recursive_test(interp_path, launch_dir, verbose):
+def recursive_test(interp_path, launch_dir, verbose, debug):
     # Check that the interpreter has been built
     if not os.path.isfile(interp_path):
         print("Could not find interpreter! Is it built?")
@@ -129,6 +129,8 @@ def recursive_test(interp_path, launch_dir, verbose):
                 seed = ""
                 if output:
                     total += 1
+                    if debug:
+                        print(" ".join(cmd), '@', root)
                     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=root, check=False)
 
                     if res.returncode != 0 or not check_file(root, out_file, res.stdout):
@@ -137,8 +139,9 @@ def recursive_test(interp_path, launch_dir, verbose):
                         to_print = True  # print errors, regardless of whether verbose is on
 
                         # Random seed: X
-                        seed = res.stderr.decode("utf-8")
-                        seed = seed[13:seed.index("\n")]
+                        run_err = res.stderr.decode("utf-8")
+                        if run_err.startswith("Random seed: "):
+                            seed = run_err[13:run_err.index("\n")]
                     else:
                         status = "-"
 
@@ -168,11 +171,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("search_dir", nargs="?",
                         help="directory to search for tests. By default, the \"examples\" directory is used.")
+    interp_path = os.path.join("build", "src", executable_name)
+    parser.add_argument("-d", "--debug", action="store_true",
+                        help="Print the arguments used to invoke tests.")
+    parser.add_argument("-i", "--interp",
+                        help=f"path to the interpreter to test. Defaults to \"{interp_path}\".")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="print the result of all tests found")
-    interp_path = os.path.join("build", "src", executable_name)
-    parser.add_argument("--interp",
-                        help=f"path to the interpreter to test. Defaults to \"{interp_path}\".")
     args = parser.parse_args()
 
     root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -184,4 +189,4 @@ if __name__ == "__main__":
                  os.path.join(root_path, "examples")
 
     import sys
-    sys.exit(recursive_test(interp_path, launch_dir, args.verbose))
+    sys.exit(recursive_test(interp_path, launch_dir, args.verbose, args.debug))

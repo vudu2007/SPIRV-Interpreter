@@ -1,0 +1,30 @@
+/* © SPIRV-Interpreter @ https://github.com/mmoult/SPIRV-Interpreter
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+#version 450
+layout(local_size_x = 4, local_size_y = 3, local_size_z = 2) in;
+
+layout(set = 0, binding = 0, std430) buffer Buffer {
+    uint data[];
+} buf;
+
+// Intentionally, this code exhibits a race condition.
+// We are testing the scheduler, and this is a way to do it!
+
+void main() {
+    const uint SIZE = 4;
+    uint saved[SIZE] = {
+        buf.data[gl_LocalInvocationIndex + 0],
+        buf.data[gl_LocalInvocationIndex + 1],
+        buf.data[gl_LocalInvocationIndex + 2],
+        buf.data[gl_LocalInvocationIndex + 3],
+    };
+    //barrier();
+    uint sum = 0;
+    for (uint i = 0; i < SIZE; ++i) {
+        sum += saved[i];
+    }
+    buf.data[gl_LocalInvocationIndex + 3] = sum - gl_LocalInvocationIndex;
+}

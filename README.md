@@ -12,7 +12,7 @@ program for given inputs.
 - Generate template files for expected inputs
 - Check against expected results
 - Verbose trace and interactive program execution
-- 111 test examples, and counting
+- 114 test examples, and counting
 
 ## Limitations
 
@@ -51,8 +51,8 @@ assuming you have [cmake](https://github.com/Kitware/CMake) version ≥ 3.28 and
 After building, you should find the `spirv-run` executable at `build/src/spirv-run`.
 
 ## Use
-Use `-h` or `--help` on the `spirv-run` executable to see the definitive list of command line arguments and flags. Some
-options (especially the more complex ones) have more information described in [Usage Help](usage-help.md).
+Use `-h` or `--help` on the `spirv-run` executable to see the definitive list of command line arguments and flags. For
+more information about specific options, read the descriptions in [Usage Help](usage-help.md).
 
 ## Testing
 The project has two complementary approaches to testing:

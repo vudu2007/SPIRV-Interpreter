@@ -14,6 +14,7 @@
 #include <vector>
 
 class Scheduler {
+protected:
     std::set<unsigned> live_threads;
     std::set<unsigned> active_threads;
     unsigned num_invocations;

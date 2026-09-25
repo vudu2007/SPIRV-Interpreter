@@ -5,6 +5,9 @@ This file expands upon some of the more complex options by giving extra informat
 
 ## Input
 
+SPIR-V shaders / kernels typically require input data before execution. Some options exist to facilitate this collection
+of these input values.
+
 ### Template generation
 
 The interpreter can automatically generate template files which can be filled in with desired values before being used
@@ -65,7 +68,18 @@ template (this is why matching the template file formats is recommended- it make
 
 ## Output
 
-This section is in development. Come back later.
+Data is printed in the "default format". This is decided by matching the given output file (.yaml or .json), if present.
+If not, the format can be given with the `--format` option.
+
+## Printing
+
+Enables the printing of an execution traces. Instructions are printed as they are executed with their result data.
+
+## Quiet
+
+Disables the printing of runtime warnings to standard error. These warnings may be useful to flag undefined behavior,
+such as bound disordering, division by zero, and unexpected underflow/overflow, but their silencing is available for
+user convenience.
 
 ## Program Control
 
@@ -79,6 +93,43 @@ Using the `-T` or `--timeout` option, the user may specify a fixed number of dyn
 program not to exceed, given as a power of 10. For example, 1 is 10^1 = 10 instructions, 2 is 10^2 = 100 instructions,
 and so on.
 
-A dynamic instruction execution is a single instance on a single thread. Therefore, if the same instruction is repeated
-several times in a program, it will be counted multiple times for the dynamic instruction count. If multiple threads run
-an instruction, the instruction will be counted for each thread.
+A dynamic instruction execution is a single instance on a single invocation. Therefore, if the same instruction is
+repeated several times in a program, it will be counted multiple times for the dynamic instruction count. If multiple
+invocations run an instruction, the instruction will be counted for each.
+
+### Invocation Scheduling
+
+The order in which invocations are executed may be customized. The SPIR-V specification requires no particular ordering
+of these invocations (outside of explicit synchronization points), and in fact, it may be advantageous to test different
+orderings as an assurance that no data races are present.
+
+There are 3 scheduling modes: round-robin, sequential, and random.
+
+* Round Robin: each invocation is stepped once, in ascending order, until all invocations complete. For example: 0, 1,
+2, 3, ... N - 1, 0, 1, 2, ...
+* Sequential: each invocation is run to completion before running the next, processed in ascending order until all
+invocations complete. For example: 0. 1. 2. 3. ... N - 1
+* Random: a random uncompleted invocation is selected and stepped once before selecting another random invocation, until
+all invocations complete. For example: 3, 9, 2, ...
+
+If a custom order pattern is given, it takes precedent over the selected mode. This pattern must follow a set of
+particular syntax rules to be understood by the scheduler:
+
+* A single step of an invocation is represented by its index. "0", "5", "31", etc
+* A comma may be used to separate steps of multiple invocations. "0,1,2". Note that repetitions are legal: "7,7,4,7"
+* Spaces have no semantic meaning and are ignored. "6, 3, 2" = "6,3,2"
+* Periods serve as a sequencing operator. The pattern prefix prior to the period is repeated to completion. For example,
+"0." runs invocation 0 to completion before running any other. "9,0." runs invocations 9 and 0 to completion before
+running any other, alternating a single step between the two, starting with 9.
+* There are two kinds of ranges: separated by commas and separated by periods. The type is indicated after a comma
+separator: "0:,3" and "4:.9". The start and stop invocations are inclusive. The start does not need to be a minimum and
+the end a maximum; "6:,3" is the same as "6,5,4,3".
+* A step value may be included after a colon separator at the end of any range. "4:,9:2". The step value must be a
+positive integer, or in other words, must be >= 1. The direction of the step matches the range bounds, therefore,
+"7:.1:2" is the same as "7.5.3.1"
+
+The pattern is consumed by the scheduler as it is used. That is to say, used sections of the pattern are deleted and
+reaching the end of the pattern will *not* loop to the beginning.
+
+A pattern cannot be used to run an invocation that is blocked or completed. If such an invocation appears, it is skipped
+and removed from the pattern.
